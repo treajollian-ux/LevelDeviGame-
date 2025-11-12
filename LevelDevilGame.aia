@@ -1,0 +1,837 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project>
+  <Name>LevelDevilGame</Name>
+  <Components>
+    
+    <!-- المكونات المرئية -->
+    <Screen name="Screen1" Title="Level Devil Game">
+      
+      <!-- منطقة اللعبة الرئيسية -->
+      <Canvas name="Canvas1" Width="fill_parent" Height="400" BackgroundColor="Black">
+        <ImageSprite name="Player" Width="40" Height="40" X="50" Y="300" Z="2"/>
+        <ImageSprite name="Goal" Width="50" Height="50" X="350" Y="300" Z="1" Visible="false"/>
+      </Canvas>
+      
+      <!-- أزرار التحكم -->
+      <HorizontalArrangement name="ControlPanel" Width="fill_parent" Height="auto">
+        <Button name="LeftButton" Text="◀" Width="80" Height="60" FontSize="20"/>
+        <Button name="JumpButton" Text="🔺" Width="80" Height="60" FontSize="20"/>
+        <Button name="RightButton" Text="▶" Width="80" Height="60" FontSize="20"/>
+      </HorizontalArrangement>
+      
+      <!-- معلومات اللعبة -->
+      <HorizontalArrangement name="InfoPanel" Width="fill_parent" Height="auto">
+        <Label name="ScoreLabel" Text="النتيجة: 0" TextColor="White" FontSize="16"/>
+        <Label name="LivesLabel" Text="❤️: 3" TextColor="Red" FontSize="16"/>
+        <Label name="LevelLabel" Text="المستوى: 1" TextColor="Yellow" FontSize="16"/>
+        <Label name="TimerLabel" Text="⏱️: 60" TextColor="Green" FontSize="16"/>
+      </HorizontalArrangement>
+      
+      <!-- شاشة البداية -->
+      <VerticalArrangement name="StartScreen" Width="fill_parent" Height="fill_parent" BackgroundColor="#80000000" Visible="true">
+        <Label name="TitleLabel" Text="Level Devil Game" TextColor="#FFD700" FontSize="30" FontBold="true"/>
+        <Label name="SubTitleLabel" Text="تحدي المستويات الشيطانية!" TextColor="White" FontSize="18"/>
+        <Button name="StartButton" Text="ابدأ اللعبة" Width="200" Height="60" FontSize="20" BackgroundColor="#4CAF50"/>
+        <Label name="InstructionsLabel" Text="استخدم الأزرار للتحريك والقفز" TextColor="#CCCCCC" FontSize="14"/>
+      </VerticalArrangement>
+      
+      <!-- شاشة نهاية اللعبة -->
+      <VerticalArrangement name="GameOverScreen" Width="fill_parent" Height="fill_parent" BackgroundColor="#80000000" Visible="false">
+        <Label name="GameOverLabel" Text="انتهت اللعبة!" TextColor="Red" FontSize="30" FontBold="true"/>
+        <Label name="FinalScoreLabel" Text="النتيجة النهائية: 0" TextColor="White" FontSize="20"/>
+        <Button name="RestartButton" Text="العب مرة أخرى" Width="200" Height="60" FontSize="20" BackgroundColor="#2196F3"/>
+        <Button name="MenuButton" Text="القائمة الرئيسية" Width="200" Height="60" FontSize="20" BackgroundColor="#FF9800"/>
+      </VerticalArrangement>
+      
+    </Screen>
+    
+    <!-- المكونات غير المرئية -->
+    <Clock name="GameClock" TimerInterval="50" Enabled="false"/>
+    <Clock name="GameTimer" TimerInterval="1000" Enabled="false"/>
+    <Sound name="BackgroundSound" Source="background_music.mp3"/>
+    <Sound name="JumpSound" Source="jump_sound.mp3"/>
+    <Sound name="CollisionSound" Source="collision_sound.mp3"/>
+    <Sound name="LevelUpSound" Source="level_up.mp3"/>
+    <Sound name="GameOverSound" Source="game_over.mp3"/>
+    <Sound name="WinSound" Source="level_up.mp3"/>
+    
+  </Components>
+  
+  <!-- كود البلوكس -->
+  <Blocks>
+    
+    <!-- المتغيرات العامة -->
+    <variables>
+      <variable name="gravity">5</variable>
+      <variable name="score">0</variable>
+      <variable name="lives">3</variable>
+      <variable name="isJumping">false</variable>
+      <variable name="level">1</variable>
+      <variable name="gameStarted">false</variable>
+      <variable name="timeLeft">60</variable>
+      <variable name="playerSpeed">8</variable>
+      <variable name="obstacles">[]</variable>
+      <variable name="platforms">[]</variable>
+    </variables>
+    
+    <!-- الأحداث الرئيسية -->
+    <event name="Screen1.Initialize">
+      <block type="controls_if">
+        <value name="IF0">
+          <block type="logic_boolean">
+            <field name="BOOL">FALSE</field>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="component_set_get">
+            <field name="COMPONENT_SELECTOR">Canvas1</field>
+            <field name="PROPERTY_SELECTOR">BackgroundImage</field>
+            <value name="VALUE">
+              <block type="text">
+                <field name="TEXT">background.png</field>
+              </block>
+            </value>
+          </block>
+          <block type="component_set_get">
+            <field name="COMPONENT_SELECTOR">Player</field>
+            <field name="PROPERTY_SELECTOR">Picture</field>
+            <value name="VALUE">
+              <block type="text">
+                <field name="TEXT">character.png</field>
+              </block>
+            </value>
+          </block>
+          <block type="variables_set">
+            <field name="VAR">score</field>
+            <value name="VALUE">
+              <block type="math_number">
+                <field name="NUM">0</field>
+              </block>
+            </value>
+          </block>
+          <block type="variables_set">
+            <field name="VAR">lives</field>
+            <value name="VALUE">
+              <block type="math_number">
+                <field name="NUM">3</field>
+              </block>
+            </value>
+          </block>
+          <block type="component_method">
+            <field name="COMPONENT_SELECTOR">BackgroundSound</field>
+            <field name="METHOD_SELECTOR">Play</field>
+          </block>
+        </statement>
+      </block>
+    </event>
+    
+    <!-- بدء اللعبة -->
+    <event name="StartButton.Click">
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">StartScreen</field>
+        <field name="PROPERTY_SELECTOR">Visible</field>
+        <value name="VALUE">
+          <block type="logic_boolean">
+            <field name="BOOL">FALSE</field>
+          </block>
+        </value>
+      </block>
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">GameClock</field>
+        <field name="PROPERTY_SELECTOR">TimerEnabled</field>
+        <value name="VALUE">
+          <block type="logic_boolean">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+      </block>
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">GameTimer</field>
+        <field name="PROPERTY_SELECTOR">TimerEnabled</field>
+        <value name="VALUE">
+          <block type="logic_boolean">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+      </block>
+      <block type="variables_set">
+        <field name="VAR">gameStarted</field>
+        <value name="VALUE">
+          <block type="logic_boolean">
+            <field name="BOOL">TRUE</field>
+          </block>
+        </value>
+      </block>
+      <block type="procedures_call">
+        <mutation name="loadLevel"></mutation>
+        <value name="arg0">
+          <block type="variables_get">
+            <field name="VAR">level</field>
+          </block>
+        </value>
+      </block>
+    </event>
+    
+    <!-- حلقة اللعبة الرئيسية -->
+    <event name="GameClock.Timer">
+      <block type="procedures_call">
+        <mutation name="applyPhysics"></mutation>
+      </block>
+      <block type="procedures_call">
+        <mutation name="moveObstacles"></mutation>
+      </block>
+      <block type="procedures_call">
+        <mutation name="checkCollisions"></mutation>
+      </block>
+      <block type="procedures_call">
+        <mutation name="checkWinCondition"></mutation>
+      </block>
+    </event>
+    
+    <!-- المؤقت -->
+    <event name="GameTimer.Timer">
+      <block type="variables_set">
+        <field name="VAR">timeLeft</field>
+        <value name="VALUE">
+          <block type="math_arithmetic">
+            <field name="OP">MINUS</field>
+            <value name="A">
+              <block type="variables_get">
+                <field name="VAR">timeLeft</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="math_number">
+                <field name="NUM">1</field>
+              </block>
+            </value>
+          </block>
+        </value>
+      </block>
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">TimerLabel</field>
+        <field name="PROPERTY_SELECTOR">Text</field>
+        <value name="VALUE">
+          <block type="text_join">
+            <value name="ADD0">
+              <block type="text">
+                <field name="TEXT">⏱️: </field>
+              </block>
+            </value>
+            <value name="ADD1">
+              <block type="variables_get">
+                <field name="VAR">timeLeft</field>
+              </block>
+            </value>
+          </block>
+        </value>
+      </block>
+      <block type="controls_if">
+        <value name="IF0">
+          <block type="logic_compare">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="variables_get">
+                <field name="VAR">timeLeft</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="math_number">
+                <field name="NUM">0</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="procedures_call">
+            <mutation name="loseLife"></mutation>
+          </block>
+        </statement>
+      </block>
+    </event>
+    
+    <!-- التحكم في اللاعب -->
+    <event name="LeftButton.Click">
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">Player</field>
+        <field name="PROPERTY_SELECTOR">X</field>
+        <value name="VALUE">
+          <block type="math_arithmetic">
+            <field name="OP">MINUS</field>
+            <value name="A">
+              <block type="component_set_get">
+                <field name="COMPONENT_SELECTOR">Player</field>
+                <field name="PROPERTY_SELECTOR">X</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="variables_get">
+                <field name="VAR">playerSpeed</field>
+              </block>
+            </value>
+          </block>
+        </value>
+      </block>
+    </event>
+    
+    <event name="RightButton.Click">
+      <block type="component_set_get">
+        <field name="COMPONENT_SELECTOR">Player</field>
+        <field name="PROPERTY_SELECTOR">X</field>
+        <value name="VALUE">
+          <block type="math_arithmetic">
+            <field name="OP">PLUS</field>
+            <value name="A">
+              <block type="component_set_get">
+                <field name="COMPONENT_SELECTOR">Player</field>
+                <field name="PROPERTY_SELECTOR">X</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="variables_get">
+                <field name="VAR">playerSpeed</field>
+              </block>
+            </value>
+          </block>
+        </value>
+      </block>
+    </event>
+    
+    <event name="JumpButton.Click">
+      <block type="controls_if">
+        <value name="IF0">
+          <block type="logic_negate">
+            <value name="BOOL">
+              <block type="variables_get">
+                <field name="VAR">isJumping</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set">
+            <field name="VAR">isJumping</field>
+            <value name="VALUE">
+              <block type="logic_boolean">
+                <field name="BOOL">TRUE</field>
+              </block>
+            </value>
+          </block>
+          <block type="component_set_get">
+            <field name="COMPONENT_SELECTOR">Player</field>
+            <field name="PROPERTY_SELECTOR">YSpeed</field>
+            <value name="VALUE">
+              <block type="math_number">
+                <field name="NUM">-15</field>
+              </block>
+            </value>
+          </block>
+          <block type="component_method">
+            <field name="COMPONENT_SELECTOR">JumpSound</field>
+            <field name="METHOD_SELECTOR">Play</field>
+          </block>
+        </statement>
+      </block>
+    </event>
+    
+    <!-- الإجراءات المخصصة -->
+    <procedure name="loadLevel" return_type="">
+      <arg name="levelNumber"></arg>
+      <statement>
+        <block type="component_method">
+          <field name="COMPONENT_SELECTOR">Canvas1</field>
+          <field name="METHOD_SELECTOR">Clear</field>
+        </block>
+        <block type="variables_set">
+          <field name="VAR">timeLeft</field>
+          <value name="VALUE">
+            <block type="math_number">
+              <field name="NUM">60</field>
+            </block>
+          </value>
+        </block>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">Player</field>
+          <field name="PROPERTY_SELECTOR">X</field>
+          <value name="VALUE">
+            <block type="math_number">
+              <field name="NUM">50</field>
+            </block>
+          </value>
+        </block>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">Player</field>
+          <field name="PROPERTY_SELECTOR">Y</field>
+          <value name="VALUE">
+            <block type="math_number">
+              <field name="NUM">300</field>
+            </block>
+          </value>
+        </block>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">EQ</field>
+              <value name="A">
+                <block type="variables_get">
+                  <field name="VAR">levelNumber</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">1</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="procedures_call">
+              <mutation name="createPlatform"></mutation>
+              <value name="arg0">
+                <block type="math_number">
+                  <field name="NUM">100</field>
+                </block>
+              </value>
+              <value name="arg1">
+                <block type="math_number">
+                  <field name="NUM">350</field>
+                </block>
+              </value>
+              <value name="arg2">
+                <block type="math_number">
+                  <field name="NUM">200</field>
+                </block>
+              </value>
+            </block>
+            <block type="procedures_call">
+              <mutation name="createObstacle"></mutation>
+              <value name="arg0">
+                <block type="math_number">
+                  <field name="NUM">250</field>
+                </block>
+              </value>
+              <value name="arg1">
+                <block type="math_number">
+                  <field name="NUM">350</field>
+                </block>
+              </value>
+            </block>
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Goal</field>
+              <field name="PROPERTY_SELECTOR">X</field>
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">350</field>
+                </block>
+              </value>
+            </block>
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Goal</field>
+              <field name="PROPERTY_SELECTOR">Y</field>
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">300</field>
+                </block>
+              </value>
+            </block>
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Goal</field>
+              <field name="PROPERTY_SELECTOR">Visible</field>
+              <value name="VALUE">
+                <block type="logic_boolean">
+                  <field name="BOOL">TRUE</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="applyPhysics" return_type="">
+      <statement>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">Player</field>
+          <field name="PROPERTY_SELECTOR">Y</field>
+          <value name="VALUE">
+            <block type="math_arithmetic">
+              <field name="OP">PLUS</field>
+              <value name="A">
+                <block type="component_set_get">
+                  <field name="COMPONENT_SELECTOR">Player</field>
+                  <field name="PROPERTY_SELECTOR">Y</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="variables_get">
+                  <field name="VAR">gravity</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">GT</field>
+              <value name="A">
+                <block type="component_set_get">
+                  <field name="COMPONENT_SELECTOR">Player</field>
+                  <field name="PROPERTY_SELECTOR">Y</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">360</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Player</field>
+              <field name="PROPERTY_SELECTOR">Y</field>
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">360</field>
+                </block>
+              </value>
+            </block>
+            <block type="variables_set">
+              <field name="VAR">isJumping</field>
+              <value name="VALUE">
+                <block type="logic_boolean">
+                  <field name="BOOL">FALSE</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="checkCollisions" return_type="">
+      <statement>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">LT</field>
+              <value name="A">
+                <block type="component_set_get">
+                  <field name="COMPONENT_SELECTOR">Player</field>
+                  <field name="PROPERTY_SELECTOR">X</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">0</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Player</field>
+              <field name="PROPERTY_SELECTOR">X</field>
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">0</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">GT</field>
+              <value name="A">
+                <block type="component_set_get">
+                  <field name="COMPONENT_SELECTOR">Player</field>
+                  <field name="PROPERTY_SELECTOR">X</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">320</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="component_set_get">
+              <field name="COMPONENT_SELECTOR">Player</field>
+              <field name="PROPERTY_SELECTOR">X</field>
+              <value name="VALUE">
+                <block type="math_number">
+                  <field name="NUM">320</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="checkWinCondition" return_type="">
+      <statement>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">LT</field>
+              <value name="A">
+                <block type="math_arithmetic">
+                  <field name="OP">MINUS</field>
+                  <value name="A">
+                    <block type="component_set_get">
+                      <field name="COMPONENT_SELECTOR">Player</field>
+                      <field name="PROPERTY_SELECTOR">X</field>
+                    </block>
+                  </value>
+                  <value name="B">
+                    <block type="component_set_get">
+                      <field name="COMPONENT_SELECTOR">Goal</field>
+                      <field name="PROPERTY_SELECTOR">X</field>
+                    </block>
+                  </value>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">20</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="variables_set">
+              <field name="VAR">score</field>
+              <value name="VALUE">
+                <block type="math_arithmetic">
+                  <field name="OP">PLUS</field>
+                  <value name="A">
+                    <block type="variables_get">
+                      <field name="VAR">score</field>
+                    </block>
+                  </value>
+                  <value name="B">
+                    <block type="math_number">
+                      <field name="NUM">100</field>
+                    </block>
+                  </value>
+                </block>
+              </value>
+            </block>
+            <block type="variables_set">
+              <field name="VAR">level</field>
+              <value name="VALUE">
+                <block type="math_arithmetic">
+                  <field name="OP">PLUS</field>
+                  <value name="A">
+                    <block type="variables_get">
+                      <field name="VAR">level</field>
+                    </block>
+                  </value>
+                  <value name="B">
+                    <block type="math_number">
+                      <field name="NUM">1</field>
+                    </block>
+                  </value>
+                </block>
+              </value>
+            </block>
+            <block type="component_method">
+              <field name="COMPONENT_SELECTOR">WinSound</field>
+              <field name="METHOD_SELECTOR">Play</field>
+            </block>
+            <block type="procedures_call">
+              <mutation name="loadLevel"></mutation>
+              <value name="arg0">
+                <block type="variables_get">
+                  <field name="VAR">level</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="loseLife" return_type="">
+      <statement>
+        <block type="variables_set">
+          <field name="VAR">lives</field>
+          <value name="VALUE">
+            <block type="math_arithmetic">
+              <field name="OP">MINUS</field>
+              <value name="A">
+                <block type="variables_get">
+                  <field name="VAR">lives</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">1</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="component_method">
+          <field name="COMPONENT_SELECTOR">CollisionSound</field>
+          <field name="METHOD_SELECTOR">Play</field>
+        </block>
+        <block type="controls_if">
+          <value name="IF0">
+            <block type="logic_compare">
+              <field name="OP">LTE</field>
+              <value name="A">
+                <block type="variables_get">
+                  <field name="VAR">lives</field>
+                </block>
+              </value>
+              <value name="B">
+                <block type="math_number">
+                  <field name="NUM">0</field>
+                </block>
+              </value>
+            </block>
+          </value>
+          <statement name="DO0">
+            <block type="procedures_call">
+              <mutation name="gameOver"></mutation>
+            </block>
+          </statement>
+          <statement name="ELSE">
+            <block type="procedures_call">
+              <mutation name="loadLevel"></mutation>
+              <value name="arg0">
+                <block type="variables_get">
+                  <field name="VAR">level</field>
+                </block>
+              </value>
+            </block>
+          </statement>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="gameOver" return_type="">
+      <statement>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">GameClock</field>
+          <field name="PROPERTY_SELECTOR">TimerEnabled</field>
+          <value name="VALUE">
+            <block type="logic_boolean">
+              <field name="BOOL">FALSE</field>
+            </block>
+          </value>
+        </block>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">GameTimer</field>
+          <field name="PROPERTY_SELECTOR">TimerEnabled</field>
+          <value name="VALUE">
+            <block type="logic_boolean">
+              <field name="BOOL">FALSE</field>
+            </block>
+          </value>
+        </block>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">GameOverScreen</field>
+          <field name="PROPERTY_SELECTOR">Visible</field>
+          <value name="VALUE">
+            <block type="logic_boolean">
+              <field name="BOOL">TRUE</field>
+            </block>
+          </value>
+        </block>
+        <block type="component_set_get">
+          <field name="COMPONENT_SELECTOR">FinalScoreLabel</field>
+          <field name="PROPERTY_SELECTOR">Text</field>
+          <value name="VALUE">
+            <block type="text_join">
+              <value name="ADD0">
+                <block type="text">
+                  <field name="TEXT">النتيجة النهائية: </field>
+                </block>
+              </value>
+              <value name="ADD1">
+                <block type="variables_get">
+                  <field name="VAR">score</field>
+                </block>
+              </value>
+            </block>
+          </value>
+        </block>
+        <block type="component_method">
+          <field name="COMPONENT_SELECTOR">GameOverSound</field>
+          <field name="METHOD_SELECTOR">Play</field>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="createObstacle" return_type="">
+      <arg name="x"></arg>
+      <arg name="y"></arg>
+      <statement>
+        <block type="component_method">
+          <field name="COMPONENT_SELECTOR">Canvas1</field>
+          <field name="METHOD_SELECTOR">CreateImageSprite</field>
+          <value name="COMPONENT">
+            <block type="text">
+              <field name="TEXT">Obstacle</field>
+            </block>
+          </value>
+          <value name="X">
+            <block type="variables_get">
+              <field name="VAR">x</field>
+            </block>
+          </value>
+          <value name="Y">
+            <block type="variables_get">
+              <field name="VAR">y</field>
+            </block>
+          </value>
+          <value name="PICTURE">
+            <block type="text">
+              <field name="TEXT">obstacle.png</field>
+            </block>
+          </value>
+        </block>
+      </statement>
+    </procedure>
+    
+    <procedure name="createPlatform" return_type="">
+      <arg name="x"></arg>
+      <arg name="y"></arg>
+      <arg name="width"></arg>
+      <statement>
+        <block type="component_method">
+          <field name="COMPONENT_SELECTOR">Canvas1</field>
+          <field name="METHOD_SELECTOR">CreateImageSprite</field>
+          <value name="COMPONENT">
+            <block type="text">
+              <field name="TEXT">Platform</field>
+            </block>
+          </value>
+          <value name="X">
+            <block type="variables_get">
+              <field name="VAR">x</field>
+            </block>
+          </value>
+          <value name="Y">
+            <block type="variables_get">
+              <field name="VAR">y</field>
+            </block>
+          </value>
+          <value name="PICTURE">
+            <block type="text">
+              <field name="TEXT">platform.png</field>
+            </block>
+          </value>
+        </block>
+      </statement>
+    </procedure>
+    
+  </Blocks>
+</Project>
